@@ -10,8 +10,7 @@ from argon2.exceptions import InvalidHashError, VerifyMismatchError
 from .config import get_settings
 
 MIN_PASSWORD_LENGTH = 12
-TOKEN_TTL = timedelta(hours=8)
-COOKIE_NAME = "access_token"
+TOKEN_TTL = timedelta(hours=2)
 ALGORITHM = "HS256"
 
 _hasher = PasswordHasher()

@@ -5,7 +5,6 @@ import secrets
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["SECRET_KEY"] = secrets.token_urlsafe(48)
 os.environ["CORS_ORIGIN"] = "http://localhost:5173"
-os.environ["COOKIE_SECURE"] = "false"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -62,4 +61,5 @@ def client(engine):
 def logged_in(client, user):
     r = client.post("/api/auth/login", json={"username": "alice", "password": TEST_PW}, headers=CSRF)
     assert r.status_code == 200
+    client.headers["Authorization"] = f"Bearer {r.json()['access_token']}"
     return client

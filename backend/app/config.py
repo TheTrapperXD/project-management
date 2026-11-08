@@ -12,7 +12,6 @@ class Settings(BaseSettings):
     DATABASE_URL: str = Field(min_length=1)
     SECRET_KEY: str = Field(min_length=32)
     CORS_ORIGIN: str = Field(min_length=1)
-    COOKIE_SECURE: bool = True
 
 
 @lru_cache

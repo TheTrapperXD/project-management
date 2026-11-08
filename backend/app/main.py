@@ -19,7 +19,7 @@ UNSAFE_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
 
 def create_app() -> FastAPI:
     settings = get_settings()  # raises (app refuses to start) on invalid config
-    app = FastAPI(title="Pharmacy Inventory", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="ExpiryGuard API", docs_url=None, redoc_url=None, openapi_url=None)
 
     api = APIRouter(prefix="/api")
     api.include_router(auth.router)
@@ -70,9 +70,9 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.CORS_ORIGIN],
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "X-Requested-With"],
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
     )
     return app
 
