@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, type User } from './api'
+import { api, getToken, logout as apiLogout, setUnauthorizedHandler, type User } from './api'
 import Login from './pages/Login'
 import DashboardPage from './pages/Dashboard'
 import StockIn from './pages/StockIn'
@@ -21,6 +21,11 @@ export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
 
   useEffect(() => {
+    setUnauthorizedHandler(() => setUser(null))
+    if (!getToken()) {
+      setChecking(false)
+      return
+    }
     api<User>('/auth/me')
       .then(setUser)
       .catch(() => setUser(null))
@@ -28,11 +33,8 @@ export default function App() {
   }, [])
 
   async function logout() {
-    try {
-      await api('/auth/logout', 'POST')
-    } finally {
-      setUser(null)
-    }
+    await apiLogout()
+    setUser(null)
   }
 
   if (checking) return <p className="center">Loading…</p>
@@ -41,7 +43,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="nav">
-        <strong>Pharmacy Inventory</strong>
+        <strong>ExpiryGuard</strong>
         <nav>
           {PAGES.map((p) => (
             <button key={p.id} className={page === p.id ? 'active' : ''} onClick={() => setPage(p.id)}>

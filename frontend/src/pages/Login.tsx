@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { api, ApiError, type User } from '../api'
+import { ApiError, login, type User } from '../api'
 
 export default function Login({ onLogin }: { onLogin: (u: User) => void }) {
   const [username, setUsername] = useState('')
@@ -12,7 +12,7 @@ export default function Login({ onLogin }: { onLogin: (u: User) => void }) {
     setBusy(true)
     setError(null)
     try {
-      onLogin(await api<User>('/auth/login', 'POST', { username, password }))
+      onLogin(await login(username, password))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Login failed')
     } finally {
@@ -22,7 +22,8 @@ export default function Login({ onLogin }: { onLogin: (u: User) => void }) {
 
   return (
     <form className="card login" onSubmit={submit}>
-      <h1>Sign in</h1>
+      <h1>ExpiryGuard</h1>
+      <p>Lot-level expiry tracking for independent pharmacies</p>
       <label>Username
         <input value={username} onChange={(e) => setUsername(e.target.value)} maxLength={64} autoComplete="username" required />
       </label>

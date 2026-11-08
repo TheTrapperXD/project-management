@@ -24,22 +24,79 @@ function messageFrom(data: unknown, fallback: string): string {
 
 const API_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 
+const TOKEN_KEY = 'eg_token'
+
+export function getToken(): string | null {
+  try {
+    return sessionStorage.getItem(TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+function setToken(token: string): void {
+  try {
+    sessionStorage.setItem(TOKEN_KEY, token)
+  } catch {
+    /* storage unavailable: session will not persist across reloads */
+  }
+}
+
+export function clearToken(): void {
+  try {
+    sessionStorage.removeItem(TOKEN_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+let onUnauthorized: () => void = () => {}
+export function setUnauthorizedHandler(fn: () => void): void {
+  onUnauthorized = fn
+}
+
 export async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const headers: Record<string, string> = {}
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
   if (method !== 'GET') headers['X-Requested-With'] = 'pharmacy-app'
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   const res = await fetch(`${API_URL}/api${path}`, {
     method,
-    credentials: 'include',
+    credentials: 'omit',
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   })
   const data: unknown = res.status === 204 ? null : await res.json().catch(() => null)
+  if (res.status === 401 && path !== '/auth/login') {
+    clearToken()
+    onUnauthorized()
+  }
   if (!res.ok) throw new ApiError(res.status, messageFrom(data, `Request failed (${res.status})`), data)
   return data as T
 }
 
 export interface User { id: number; username: string }
+
+export async function login(username: string, password: string): Promise<User> {
+  const t = await api<{ access_token: string }>('/auth/login', 'POST', { username, password })
+  setToken(t.access_token)
+  try {
+    return await api<User>('/auth/me')
+  } catch (err) {
+    clearToken()
+    throw err
+  }
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await api('/auth/logout', 'POST')
+  } catch {
+    /* best-effort: the token is discarded either way */
+  }
+  clearToken()
+}
 export interface Medicine { id: number; name: string; sku: string; total_quantity: number; reorder_threshold: number }
 export interface BucketItem {
   medicine_id: number; name: string; sku: string; lot_number: string
