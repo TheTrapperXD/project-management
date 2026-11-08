@@ -22,11 +22,13 @@ function messageFrom(data: unknown, fallback: string): string {
   return fallback
 }
 
+const API_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+
 export async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const headers: Record<string, string> = {}
   if (method !== 'GET') headers['X-Requested-With'] = 'pharmacy-app'
   if (body !== undefined) headers['Content-Type'] = 'application/json'
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_URL}/api${path}`, {
     method,
     credentials: 'include',
     headers,
