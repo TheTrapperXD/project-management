@@ -1,12 +1,19 @@
-from datetime import date
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from ..clock import today_local
 from ..db import get_db
 from ..deps import get_current_user
 from ..models import User
-from ..schemas import MedicineOut, StockInRequest, StockInResponse, StockOutRequest, StockOutResponse
+from ..schemas import (
+    MedicineOut,
+    StockInRequest,
+    StockInResponse,
+    StockOutRequest,
+    StockOutResponse,
+    WriteoffRequest,
+    WriteoffResponse,
+)
 from ..services import inventory
 
 router = APIRouter(tags=["stock"], dependencies=[Depends(get_current_user)])
@@ -16,7 +23,7 @@ router = APIRouter(tags=["stock"], dependencies=[Depends(get_current_user)])
 def stock_in(body: StockInRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     lot = inventory.stock_in(
         db, user.id, body.name, body.sku, body.lot_number, body.expiry_date,
-        body.quantity, body.reorder_threshold, today=date.today(),
+        body.quantity, body.reorder_threshold, today=today_local(), unit_cost=body.unit_cost,
     )
     return StockInResponse(
         medicine_id=lot.medicine_id, lot_id=lot.id, lot_number=lot.lot_number,
@@ -26,10 +33,15 @@ def stock_in(body: StockInRequest, db: Session = Depends(get_db), user: User = D
 
 @router.post("/stock/out", response_model=StockOutResponse)
 def stock_out(body: StockOutRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    allocations = inventory.dispense_fifo(db, user.id, body.medicine_id, body.quantity, today=date.today())
+    allocations = inventory.dispense_fifo(db, user.id, body.medicine_id, body.quantity, today=today_local())
     return {"allocations": allocations}
+
+
+@router.post("/stock/writeoff", response_model=WriteoffResponse)
+def writeoff(body: WriteoffRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    return inventory.writeoff_lot(db, user.id, body.lot_id, body.quantity, body.reason, today=today_local())
 
 
 @router.get("/medicines", response_model=list[MedicineOut])
 def medicines(db: Session = Depends(get_db)):
-    return inventory.list_medicines(db, date.today())
+    return inventory.list_medicines(db, today_local())

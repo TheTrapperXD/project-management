@@ -8,6 +8,7 @@ from .routers import auth, dashboard, reports, stock
 from .services.inventory import (
     ConflictError,
     DomainValidationError,
+    ExceedsRemainingError,
     InsufficientStockError,
     NotFoundError,
 )
@@ -31,6 +32,10 @@ def create_app() -> FastAPI:
     @app.exception_handler(ConflictError)
     async def _conflict(_: Request, exc: ConflictError):
         return JSONResponse({"detail": str(exc)}, status_code=409)
+
+    @app.exception_handler(ExceedsRemainingError)
+    async def _exceeds_remaining(_: Request, exc: ExceedsRemainingError):
+        return JSONResponse({"detail": str(exc), "remaining": exc.remaining}, status_code=409)
 
     @app.exception_handler(InsufficientStockError)
     async def _insufficient(_: Request, exc: InsufficientStockError):

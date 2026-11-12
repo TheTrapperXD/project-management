@@ -30,7 +30,7 @@ def test_every_route_except_login_requires_bearer_token(client):
         assert r.status_code == 401, (method, path, r.status_code)
         assert r.headers["www-authenticate"] == "Bearer", (method, path)
         checked += 1
-    assert checked == 7
+    assert checked == 8
 
 
 def test_post_without_csrf_header_is_403(client, logged_in):

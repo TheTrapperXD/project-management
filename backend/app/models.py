@@ -1,6 +1,7 @@
 from datetime import date, datetime, timezone
+from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -43,6 +44,8 @@ class Lot(Base):
     lot_number: Mapped[str] = mapped_column(String(64))
     expiry_date: Mapped[date] = mapped_column(Date)
     quantity: Mapped[int] = mapped_column(Integer)
+    # Baht per unit; NULL = cost unknown (never treated as zero).
+    unit_cost: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
@@ -62,4 +65,8 @@ class StockMovement(Base):
     occurred_on: Mapped[date] = mapped_column(Date)
     # Nullable: automatic expiry sweeps have no acting user.
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    # Snapshot of the lot's unit_cost when the movement was written.
+    unit_cost: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    # Waste only: 'expired' (sweep) or a write-off reason.
+    reason: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
