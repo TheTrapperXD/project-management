@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react'
-import { api, ApiError, type WasteReport } from '../api'
+import { api, ApiError, formatBaht, type WasteReport } from '../api'
+
+const REASON_LABELS: Record<string, string> = {
+  expired: 'Expired',
+  expiring: 'Expiring soon',
+  damaged: 'Damaged',
+  recalled: 'Recalled',
+  other: 'Other',
+}
 
 function currentMonth(): string {
   const d = new Date()
@@ -30,18 +38,38 @@ export default function WasteReportPage() {
       {report && (
         <>
           {report.medicines.length === 0 ? (
-            <p>No expired stock wasted in {report.month}.</p>
+            <p>No stock wasted in {report.month}.</p>
           ) : (
-            <table>
-              <thead><tr><th>Medicine</th><th>SKU</th><th>Lots</th><th>Total wasted</th></tr></thead>
-              <tbody>
-                {report.medicines.map((m) => (
-                  <tr key={m.medicine_id}><td>{m.name}</td><td>{m.sku}</td><td>{m.lots_count}</td><td>{m.total_wasted}</td></tr>
-                ))}
-              </tbody>
-            </table>
+            <>
+              <table>
+                <thead><tr><th>Medicine</th><th>SKU</th><th>Lots</th><th>Units wasted</th><th>Value</th><th>Unvalued units</th></tr></thead>
+                <tbody>
+                  {report.medicines.map((m) => (
+                    <tr key={m.medicine_id}>
+                      <td>{m.name}</td><td>{m.sku}</td><td>{m.lots_count}</td><td>{m.total_wasted}</td>
+                      <td>{formatBaht(m.wasted_value)}</td><td>{m.unvalued_units}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <h2>By reason</h2>
+              <table>
+                <thead><tr><th>Reason</th><th>Units</th><th>Value</th><th>Unvalued units</th></tr></thead>
+                <tbody>
+                  {report.by_reason.map((r) => (
+                    <tr key={r.reason ?? ''}>
+                      <td>{r.reason === null ? '—' : REASON_LABELS[r.reason] ?? r.reason}</td>
+                      <td>{r.units}</td><td>{formatBaht(r.value)}</td><td>{r.unvalued_units}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
-          <p><strong>Grand total wasted: {report.grand_total}</strong></p>
+          <p>
+            <strong>Grand total: {report.grand_total} units, {formatBaht(report.grand_total_value)}</strong>
+            {report.grand_total_unvalued_units > 0 && <> ({report.grand_total_unvalued_units} units have no unit cost and are not included in the value)</>}
+          </p>
         </>
       )}
     </div>

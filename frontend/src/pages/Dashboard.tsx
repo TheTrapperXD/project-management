@@ -1,7 +1,60 @@
-import { useEffect, useState } from 'react'
-import { api, ApiError, type BucketItem, type Dashboard } from '../api'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { api, ApiError, formatBaht, type BucketItem, type Dashboard, type WriteoffReason, type WriteoffResult } from '../api'
 
-function Section({ cls, title, items }: { cls: string; title: string; items: BucketItem[] }) {
+const REASONS: { value: WriteoffReason; label: string }[] = [
+  { value: 'expiring', label: 'Expiring soon' },
+  { value: 'damaged', label: 'Damaged' },
+  { value: 'recalled', label: 'Recalled' },
+  { value: 'other', label: 'Other' },
+]
+
+function PullControls({ item, onDone, onCancel }: {
+  item: BucketItem
+  onDone: (r: WriteoffResult) => void
+  onCancel: () => void
+}) {
+  const [quantity, setQuantity] = useState(String(item.quantity))
+  const [reason, setReason] = useState<WriteoffReason>('expiring')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function confirm(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      onDone(await api<WriteoffResult>('/stock/writeoff', 'POST', { lot_id: item.lot_id, quantity: Number(quantity), reason }))
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Request failed')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form className="pull" onSubmit={confirm}>
+      <label>Qty
+        <input type="number" min={1} max={item.quantity} step={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
+      </label>
+      <label>Reason
+        <select value={reason} onChange={(e) => setReason(e.target.value as WriteoffReason)}>
+          {REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+        </select>
+      </label>
+      <button type="submit" disabled={busy}>Confirm</button>
+      <button type="button" onClick={onCancel} disabled={busy}>Cancel</button>
+      {error && <p className="error" role="alert">{error}</p>}
+    </form>
+  )
+}
+
+function Section({ cls, title, items, pulling, setPulling, onPulled }: {
+  cls: string
+  title: string
+  items: BucketItem[]
+  pulling: number | null
+  setPulling: (lotId: number | null) => void
+  onPulled: (r: WriteoffResult) => void
+}) {
   return (
     <section className={`bucket ${cls}`}>
       <h2>{title} ({items.length})</h2>
@@ -10,16 +63,23 @@ function Section({ cls, title, items }: { cls: string; title: string; items: Buc
       ) : (
         <table>
           <thead>
-            <tr><th>Medicine</th><th>Lot</th><th>Expiry</th><th>Qty</th><th>Days left</th></tr>
+            <tr><th>Medicine</th><th>Lot</th><th>Expiry</th><th>Qty</th><th>Days left</th><th></th></tr>
           </thead>
           <tbody>
             {items.map((i) => (
-              <tr key={`${i.medicine_id}-${i.lot_number}`}>
+              <tr key={i.lot_id}>
                 <td>{i.name} ({i.sku})</td>
                 <td>{i.lot_number}</td>
                 <td>{i.expiry_date}</td>
                 <td>{i.quantity}</td>
                 <td>{i.days_left}</td>
+                <td>
+                  {pulling === i.lot_id ? (
+                    <PullControls item={i} onDone={onPulled} onCancel={() => setPulling(null)} />
+                  ) : (
+                    <button type="button" onClick={() => setPulling(i.lot_id)}>Pull</button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -32,22 +92,41 @@ function Section({ cls, title, items }: { cls: string; title: string; items: Buc
 export default function DashboardPage() {
   const [data, setData] = useState<Dashboard | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [pulling, setPulling] = useState<number | null>(null)
+  const [pulled, setPulled] = useState<WriteoffResult | null>(null)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api<Dashboard>('/dashboard')
-      .then(setData)
+      .then((d) => {
+        setData(d)
+        setError(null)
+      })
       .catch((e) => setError(e instanceof ApiError ? e.message : 'Failed to load'))
   }, [])
+  useEffect(load, [load])
 
-  if (error) return <p className="error" role="alert">{error}</p>
+  function onPulled(r: WriteoffResult) {
+    setPulling(null)
+    setPulled(r)
+    load()
+  }
+
+  if (error && !data) return <p className="error" role="alert">{error}</p>
   if (!data) return <p>Loading…</p>
 
+  const sectionProps = { pulling, setPulling, onPulled }
   return (
     <div>
       <h1>Expiry dashboard</h1>
-      <Section cls="red" title="RED — Expires within 30 days" items={data.red} />
-      <Section cls="yellow" title="YELLOW — Expires in 31-60 days" items={data.yellow} />
-      <Section cls="green" title="GREEN — Expires in 61-90 days" items={data.green} />
+      {error && <p className="error" role="alert">{error}</p>}
+      {pulled && (
+        <p className="success" role="status">
+          Pulled {pulled.written_off} from {pulled.medicine_name} lot {pulled.lot_number} ({pulled.remaining} remaining). Value: {formatBaht(pulled.value)}
+        </p>
+      )}
+      <Section cls="red" title="RED — Expires within 30 days" items={data.red} {...sectionProps} />
+      <Section cls="yellow" title="YELLOW — Expires in 31-60 days" items={data.yellow} {...sectionProps} />
+      <Section cls="green" title="GREEN — Expires in 61-90 days" items={data.green} {...sectionProps} />
       <section className="bucket">
         <h2>Low stock ({data.low_stock.length})</h2>
         {data.low_stock.length === 0 ? (

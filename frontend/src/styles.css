@@ -24,3 +24,7 @@ th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #e1e
 .bucket.yellow h2 { color: #6b5200; }
 .bucket.green { border-left-color: #2e7d32; }
 .bucket.green h2 { color: #14502a; }
+.pull { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; }
+.pull label { font-weight: 400; }
+.pull input { width: 6rem; }
+.pull .error { flex-basis: 100%; margin: 0; }

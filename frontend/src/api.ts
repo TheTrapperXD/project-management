@@ -100,13 +100,36 @@ export async function logout(): Promise<void> {
 export interface Medicine { id: number; name: string; sku: string; total_quantity: number; reorder_threshold: number }
 export interface BucketItem {
   medicine_id: number; name: string; sku: string; lot_number: string
-  expiry_date: string; quantity: number; days_left: number
+  expiry_date: string; quantity: number; days_left: number; lot_id: number
 }
 export interface Dashboard { red: BucketItem[]; yellow: BucketItem[]; green: BucketItem[]; low_stock: Medicine[] }
 export interface Allocation { lot_id: number; lot_number: string; expiry_date: string; taken: number }
+/** Money arrives from the API as a 2-decimal string (e.g. "12.50") or null when unknown. Display only. */
+export type Money = string | null
+
+export function formatBaht(value: Money): string {
+  return value === null ? '—' : `฿${value}`
+}
+
+export type WriteoffReason = 'expiring' | 'damaged' | 'recalled' | 'other'
+
+export interface WriteoffResult {
+  lot_id: number; medicine_name: string; lot_number: string
+  written_off: number; remaining: number; value: Money
+}
+
 export interface WasteReport {
   month: string
-  medicines: { medicine_id: number; name: string; sku: string; lots_count: number; total_wasted: number }[]
-  lots: { medicine_id: number; name: string; sku: string; lot_number: string; expiry_date: string; quantity: number }[]
+  medicines: {
+    medicine_id: number; name: string; sku: string; lots_count: number
+    total_wasted: number; wasted_value: Money; unvalued_units: number
+  }[]
+  by_reason: { reason: string | null; units: number; value: Money; unvalued_units: number }[]
+  lots: {
+    medicine_id: number; name: string; sku: string; lot_number: string; expiry_date: string
+    quantity: number; reason: string | null; unit_cost: Money; value: Money
+  }[]
   grand_total: number
+  grand_total_value: Money
+  grand_total_unvalued_units: number
 }

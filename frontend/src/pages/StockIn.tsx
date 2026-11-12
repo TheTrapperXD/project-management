@@ -10,6 +10,7 @@ export default function StockIn() {
   const [expiry, setExpiry] = useState('')
   const [quantity, setQuantity] = useState('')
   const [threshold, setThreshold] = useState('')
+  const [unitCost, setUnitCost] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<StockInResult | null>(null)
   const [busy, setBusy] = useState(false)
@@ -27,10 +28,13 @@ export default function StockIn() {
         expiry_date: expiry,
         quantity: Number(quantity),
         reorder_threshold: threshold === '' ? null : Number(threshold),
+        // Sent as the typed string so the server parses it as an exact decimal.
+        unit_cost: unitCost === '' ? null : unitCost,
       })
       setResult(res)
       setLotNumber('')
       setQuantity('')
+      setUnitCost('')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Request failed')
     } finally {
@@ -47,6 +51,7 @@ export default function StockIn() {
       <label>Expiry date<input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} required /></label>
       <label>Quantity<input type="number" min={1} max={1000000} step={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} required /></label>
       <label>Reorder threshold (optional)<input type="number" min={0} max={1000000} step={1} value={threshold} onChange={(e) => setThreshold(e.target.value)} /></label>
+      <label>Unit cost (฿ per unit, optional)<input type="number" min={0} max={1000000} step={0.01} inputMode="decimal" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} /></label>
       {error && <p className="error" role="alert">{error}</p>}
       {result && <p className="success" role="status">Saved. Lot {result.lot_number} now holds {result.lot_quantity} units.</p>}
       <button type="submit" disabled={busy}>Add stock</button>
