@@ -47,44 +47,52 @@ function PullControls({ item, onDone, onCancel }: {
   )
 }
 
-function Section({ cls, title, items, pulling, setPulling, onPulled }: {
-  cls: string
-  title: string
-  items: BucketItem[]
+interface PullProps {
   pulling: number | null
   setPulling: (lotId: number | null) => void
   onPulled: (r: WriteoffResult) => void
-}) {
+}
+
+function LotRow({ item, pulling, setPulling, onPulled }: { item: BucketItem } & PullProps) {
+  return (
+    <tr>
+      <td>{item.name} ({item.sku})</td>
+      <td>{item.lot_number}</td>
+      <td>{item.expiry_date}</td>
+      <td>{item.quantity}</td>
+      <td>{item.days_left}</td>
+      <td>
+        {pulling === item.lot_id ? (
+          <PullControls item={item} onDone={onPulled} onCancel={() => setPulling(null)} />
+        ) : (
+          <button type="button" onClick={() => setPulling(item.lot_id)}>Pull</button>
+        )}
+      </td>
+    </tr>
+  )
+}
+
+function LotTable({ items, ...pull }: { items: BucketItem[] } & PullProps) {
+  if (items.length === 0) return <p>None.</p>
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Medicine</th><th>Lot</th><th>Expiry</th><th>Qty</th><th>Days left</th><th></th></tr>
+        </thead>
+        <tbody>
+          {items.map((i) => <LotRow key={i.lot_id} item={i} {...pull} />)}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function Section({ cls, title, items, ...pull }: { cls: string; title: string; items: BucketItem[] } & PullProps) {
   return (
     <section className={`bucket ${cls}`}>
       <h2>{title} ({items.length})</h2>
-      {items.length === 0 ? (
-        <p>None.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr><th>Medicine</th><th>Lot</th><th>Expiry</th><th>Qty</th><th>Days left</th><th></th></tr>
-          </thead>
-          <tbody>
-            {items.map((i) => (
-              <tr key={i.lot_id}>
-                <td>{i.name} ({i.sku})</td>
-                <td>{i.lot_number}</td>
-                <td>{i.expiry_date}</td>
-                <td>{i.quantity}</td>
-                <td>{i.days_left}</td>
-                <td>
-                  {pulling === i.lot_id ? (
-                    <PullControls item={i} onDone={onPulled} onCancel={() => setPulling(null)} />
-                  ) : (
-                    <button type="button" onClick={() => setPulling(i.lot_id)}>Pull</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <LotTable items={items} {...pull} />
     </section>
   )
 }
@@ -127,6 +135,10 @@ export default function DashboardPage() {
       <Section cls="red" title="RED — Expires within 30 days" items={data.red} {...sectionProps} />
       <Section cls="yellow" title="YELLOW — Expires in 31-60 days" items={data.yellow} {...sectionProps} />
       <Section cls="green" title="GREEN — Expires in 61-90 days" items={data.green} {...sectionProps} />
+      <details className="bucket">
+        <summary>Later: expires in over 90 days ({data.later.length})</summary>
+        <LotTable items={data.later} {...sectionProps} />
+      </details>
       <section className="bucket">
         <h2>Low stock ({data.low_stock.length})</h2>
         {data.low_stock.length === 0 ? (

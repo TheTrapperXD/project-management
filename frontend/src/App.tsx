@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, getToken, logout as apiLogout, setUnauthorizedHandler, type User } from './api'
+import { api, getToken, logout as apiLogout, setUnauthorizedHandler, setWakingHandler, wakeServer, type User } from './api'
 import Login from './pages/Login'
 import DashboardPage from './pages/Dashboard'
 import StockIn from './pages/StockIn'
@@ -20,8 +20,16 @@ export default function App() {
   const [checking, setChecking] = useState(true)
   const [page, setPage] = useState<Page>('dashboard')
 
+  const [waking, setWaking] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+
   useEffect(() => {
-    setUnauthorizedHandler(() => setUser(null))
+    setWakingHandler(setWaking)
+    setUnauthorizedHandler(() => {
+      setUser(null)
+      setNotice('Session expired, please sign in again.')
+    })
+    wakeServer()
     if (!getToken()) {
       setChecking(false)
       return
@@ -35,13 +43,24 @@ export default function App() {
   async function logout() {
     await apiLogout()
     setUser(null)
+    setNotice(null)
   }
 
-  if (checking) return <p className="center">Loading…</p>
-  if (!user) return <Login onLogin={setUser} />
+  function onLogin(u: User) {
+    setNotice(null)
+    setUser(u)
+  }
+
+  const banner = waking && (
+    <p className="waking" role="status">Server is waking up. This can take up to a minute...</p>
+  )
+
+  if (checking) return <>{banner}<p className="center">Loading…</p></>
+  if (!user) return <>{banner}<Login onLogin={onLogin} notice={notice} /></>
 
   return (
     <div className="app">
+      {banner}
       <header className="nav">
         <strong>ExpiryGuard</strong>
         <nav>

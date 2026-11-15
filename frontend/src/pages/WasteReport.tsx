@@ -41,6 +41,7 @@ export default function WasteReportPage() {
             <p>No stock wasted in {report.month}.</p>
           ) : (
             <>
+              <div className="table-wrap">
               <table>
                 <thead><tr><th>Medicine</th><th>SKU</th><th>Lots</th><th>Units wasted</th><th>Value</th><th>Unvalued units</th></tr></thead>
                 <tbody>
@@ -52,7 +53,9 @@ export default function WasteReportPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
               <h2>By reason</h2>
+              <div className="table-wrap">
               <table>
                 <thead><tr><th>Reason</th><th>Units</th><th>Value</th><th>Unvalued units</th></tr></thead>
                 <tbody>
@@ -64,6 +67,7 @@ export default function WasteReportPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </>
           )}
           <p>

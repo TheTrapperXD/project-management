@@ -5,6 +5,10 @@ main { max-width: 960px; margin: 0 auto; padding: 1rem; }
 .nav { display: flex; gap: 1rem; align-items: center; padding: 0.5rem 1rem; background: #fff; border-bottom: 1px solid #d5d8dd; flex-wrap: wrap; }
 .nav nav { display: flex; gap: 0.25rem; }
 .nav .spacer { flex: 1; }
+button, input, select { min-height: 40px; }
+.table-wrap { overflow-x: auto; }
+.waking { margin: 0; padding: 0.5rem 1rem; text-align: center; color: #6b5200; background: #fff6d6; border-bottom: 1px solid #f2b705; }
+details.bucket summary { cursor: pointer; font-size: 1.25rem; font-weight: 700; min-height: 40px; }
 button { padding: 0.4rem 0.8rem; border: 1px solid #8a9099; border-radius: 4px; background: #fff; cursor: pointer; font: inherit; }
 button.active { background: #1f3a5f; color: #fff; border-color: #1f3a5f; }
 button[type=submit] { background: #1f3a5f; color: #fff; border-color: #1f3a5f; }

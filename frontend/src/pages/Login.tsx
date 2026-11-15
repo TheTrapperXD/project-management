@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { ApiError, login, type User } from '../api'
 
-export default function Login({ onLogin }: { onLogin: (u: User) => void }) {
+export default function Login({ onLogin, notice }: { onLogin: (u: User) => void; notice?: string | null }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -30,6 +30,7 @@ export default function Login({ onLogin }: { onLogin: (u: User) => void }) {
       <label>Password
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} maxLength={256} autoComplete="current-password" required />
       </label>
+      {notice && !error && <p className="error" role="alert">{notice}</p>}
       {error && <p className="error" role="alert">{error}</p>}
       <button type="submit" disabled={busy}>Sign in</button>
     </form>
