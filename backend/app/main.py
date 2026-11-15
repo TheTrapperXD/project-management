@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import get_settings
-from .routers import auth, dashboard, reports, stock
+from .routers import auth, dashboard, health, reports, stock
 from .services.inventory import (
     ConflictError,
     DomainValidationError,
@@ -23,6 +23,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="ExpiryGuard API", docs_url=None, redoc_url=None, openapi_url=None)
 
     api = APIRouter(prefix="/api")
+    api.include_router(health.router)
     api.include_router(auth.router)
     api.include_router(stock.router)
     api.include_router(dashboard.router)

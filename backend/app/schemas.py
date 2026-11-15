@@ -1,8 +1,8 @@
 from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 MAX_QTY = 1_000_000
 MAX_UNIT_COST = Decimal("1000000")
@@ -12,8 +12,11 @@ class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
-class LoginRequest(_Strict):
-    username: str = Field(min_length=1, max_length=64)
+class LoginRequest(BaseModel):
+    # Not _Strict: the password must reach verification exactly as typed (no stripping).
+    model_config = ConfigDict(extra="forbid")
+
+    username: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=64)]
     password: str = Field(min_length=1, max_length=256)
 
 
@@ -37,6 +40,15 @@ class StockInRequest(_Strict):
     reorder_threshold: int | None = Field(default=None, ge=0, le=MAX_QTY)
     # Baht per unit. Send as a JSON string (e.g. "12.50") to keep it exact.
     unit_cost: Decimal | None = Field(default=None, ge=0, le=MAX_UNIT_COST, decimal_places=2)
+
+    @field_validator("sku", "lot_number")
+    @classmethod
+    def _upper(cls, v: str) -> str:
+        # Runs after trimming; SKU and lot number are case-insensitive identifiers.
+        v = v.upper()
+        if len(v) > 64:
+            raise ValueError("String should have at most 64 characters")
+        return v
 
 
 class StockInResponse(BaseModel):

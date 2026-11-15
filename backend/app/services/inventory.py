@@ -86,15 +86,25 @@ def stock_in(
     if reorder_threshold is not None and reorder_threshold < 0:
         raise DomainValidationError("Reorder threshold must be >= 0")
 
-    medicine = session.scalars(select(Medicine).where(Medicine.sku == sku)).first()
+    # SKU and lot number match case-insensitively; new rows are stored upper-case.
+    sku = sku.upper()
+    lot_number = lot_number.upper()
+
+    medicine = session.scalars(
+        select(Medicine).where(func.upper(Medicine.sku) == sku).order_by(Medicine.id)
+    ).first()
     if medicine is None:
         medicine = Medicine(name=name, sku=sku, reorder_threshold=reorder_threshold or 0)
         session.add(medicine)
         session.flush()
+    elif reorder_threshold is not None:
+        # The name of an existing medicine is never overwritten; the threshold is.
+        medicine.reorder_threshold = reorder_threshold
 
     lot = session.scalars(
         select(Lot)
-        .where(Lot.medicine_id == medicine.id, Lot.lot_number == lot_number)
+        .where(Lot.medicine_id == medicine.id, func.upper(Lot.lot_number) == lot_number)
+        .order_by(Lot.id)
         .with_for_update()
     ).first()
     if lot is None:
@@ -238,7 +248,7 @@ def dashboard_buckets(session: Session, today: date) -> dict[str, list[dict[str,
         )
     items.sort(key=lambda i: (i["days_left"], i["lot_id"]))
 
-    result: dict[str, list[dict[str, Any]]] = {"red": [], "yellow": [], "green": []}
+    result: dict[str, list[dict[str, Any]]] = {"red": [], "yellow": [], "green": [], "later": []}
     for item in items:
         d = item["days_left"]
         if d <= 30:
@@ -247,6 +257,8 @@ def dashboard_buckets(session: Session, today: date) -> dict[str, list[dict[str,
             result["yellow"].append(item)
         elif d <= 90:
             result["green"].append(item)
+        else:
+            result["later"].append(item)
 
     result["low_stock"] = [m for m in list_medicines(session, today) if m["reorder_threshold"] > 0 and m["total_quantity"] < m["reorder_threshold"]]
     return result

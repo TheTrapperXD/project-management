@@ -24,7 +24,7 @@ def api_routes():
 def test_every_route_except_login_requires_bearer_token(client):
     checked = 0
     for method, path in api_routes():
-        if path == "/api/auth/login":
+        if path in ("/api/auth/login", "/api/health"):  # the only public routes
             continue
         r = client.request(method, path, headers=CSRF, json={} if method != "GET" else None)
         assert r.status_code == 401, (method, path, r.status_code)
